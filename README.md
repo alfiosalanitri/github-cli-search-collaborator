@@ -2,7 +2,7 @@
 This script search an user into all repositories
 
 # REQUIREMENTS
-- github-cli [read the doc](https://cli.github.com/manual/gh_help_environment)
+- github-cli ([read doc usage](https://cli.github.com/manual/gh_help_environment))
 
 # USAGE
 - clone this repo and `cd /path/to/this/repo`
