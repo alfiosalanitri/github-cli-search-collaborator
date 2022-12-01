@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+# DESCRIPTION
+# This script search an user into all repositories
+#
+# REQUIREMENTS
+# - github-cli (https://cli.github.com/manual/gh_help_environment)
+#
+# USAGE
+# - clone this repo and `cd /path/to/this/repo`
+# - `mv .env.examle .env`
+# - set your token
+# - `./githubcli-sc` or `./githubcli-sc 10` (to search in the top 10 repositories)
+#
+# AUTHOR:
+#	this script is written by Alfio Salanitri <www.alfiosalanitri.it> and are licensed under MIT License.
+
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly NC='\033[0m'
+readonly CURRENT_DIRECTORY=$(pwd)
+
+# check requirements
+if ! command -v gh &> /dev/null; then
+	printf "[${RED}error${NC}] Sorry, but github cli is required.\n"
+  exit 1;
+fi
+if [ ! -f $CURRENT_DIRECTORY/.env ]; then
+	printf "[${RED}error${NC}] Sorry, but .env file with token is required.\n"
+  exit 1;
+fi
+
+# login to github
+gh auth login --with-token < $CURRENT_DIRECTORY/.env
+
+# get username
+read -p "Enter username to search: " USERNAME
+
+# setup per page
+per_page=1000
+if [ "" != "$1" ]; then
+	per_page=$1
+fi
+
+# get the repo list
+readarray -t REPOSITORIES < <(gh repo list -L $per_page | awk '{print $1};')
+
+# init all
+main() {
+	printf "\n--- Search results for user ${GREEN}%s${NC} in the top ${GREEN}${per_page}${NC} repositories ---\n\n" "$USERNAME"
+	for REPO in ${REPOSITORIES[@]}; 
+	do
+		all_collabs=$(gh api repos/$REPO/collaborators --jq '.[].login') 
+		is_collab=$(echo $all_collabs | grep -w $USERNAME)
+		readarray -t collabs_array < <(echo $all_collabs)
+		collabs_string="$(echo ${collabs_array[@]} | sed 's/ /|/g')"
+		if [ "" != "$is_collab" ]; then
+			printf "[${GREEN}yes${NC}]\t%s\t%s" "$REPO" "$collabs_string"
+		else
+			printf "%s\t%s\t%s" "[no]" "$REPO" "$collabs_string"
+		fi
+		echo ""
+	done | column -t -L --table-columns IS_COLLAB,REPO,COLLABS
+}
+
+main
+
+exit 0
